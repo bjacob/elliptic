@@ -1,7 +1,6 @@
-#include <iostream>
-#include <cassert>
 #include <limits>
 #include <cmath>
+#include <algorithm>
 
 /*
  * Algorithm and notation from:
@@ -14,7 +13,7 @@
  */
 
 template <typename real>
-real carlson_RF_positive_discriminant(const real x0, const real y0, const real z0)
+real carlson_RF_real(const real x0, const real y0, const real z0)
 {
   if(!std::isfinite(x0) ||
      !std::isfinite(y0) ||
@@ -50,7 +49,6 @@ real carlson_RF_positive_discriminant(const real x0, const real y0, const real z
     y = one_fourth * (y + lambda);
     z = one_fourth * (z + lambda);
   }
-  std::cerr << "finished after " << iter << " iterations" << std::endl;
   const real d = one_fourth_to_the_iter / A;
   const real X = d * (A0 - x0);
   const real Y = d * (A0 - y0);
@@ -86,7 +84,7 @@ real integral_inverse_sqrt_cubic_three_roots(const real y, const real x,
     return real(0);
   }
   if (x == std::numeric_limits<real>::infinity()) {
-    return 2 * carlson_RF_positive_discriminant(y - u3, y - u2, y - u1);
+    return 2 * carlson_RF_real(y - u3, y - u2, y - u1);
   }
   const real p = std::max((x - u1) * (y - u2) * (y - u3), real(0));
   const real q = std::max((y - u1) * (x - u2) * (x - u3), real(0));
@@ -94,7 +92,7 @@ real integral_inverse_sqrt_cubic_three_roots(const real y, const real x,
   const real V1 = (p + q + 2 * std::sqrt(p * q)) / (x_minus_y * x_minus_y);
   const real V2 = V1 + u1 - u2;
   const real V3 = V1 + u1 - u3;
-  return 2 * carlson_RF_positive_discriminant(V3, V2, V1);
+  return 2 * carlson_RF_real(V3, V2, V1);
 }
 
 /*
@@ -135,9 +133,9 @@ real integral_inverse_sqrt_cubic_one_quadratic_factor(
   }
   const real M_squared_minus_beta1 = M_squared - g - 2 * u1;
   const real c11_sqrt2 = 2 * std::sqrt(f + g * u1 + u1 * u1);
-  return 4 * carlson_RF_positive_discriminant(M_squared,
-                                              M_squared_minus_beta1 - c11_sqrt2,
-                                              M_squared_minus_beta1 + c11_sqrt2);
+  return 4 * carlson_RF_real(M_squared,
+                             M_squared_minus_beta1 - c11_sqrt2,
+                             M_squared_minus_beta1 + c11_sqrt2);
 }
 
 template <typename real>
@@ -215,15 +213,4 @@ real integral_inverse_sqrt_cubic(real y, real x,
   } else {
     return r * integral_inverse_sqrt_cubic_three_roots(y, x, u1, u2, u3);
   }
-}
-
-int main()
-{
-  std::cout.precision(16);
-
-  double a = 2;
-  double b = -2;
-  double c = 0;
-  double d = 1;
-  std::cout << integral_inverse_sqrt_cubic(1.0, 2.0, a, b, c, d) << std::endl;
 }
