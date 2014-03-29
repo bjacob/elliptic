@@ -1,3 +1,4 @@
+#include "interval.h"
 #include "elliptic.h"
 
 #include <iostream>
@@ -11,64 +12,33 @@ bool are_asserts_enabled()
   return asserts_are_enabled;
 }
 
+void verify(bool_interval b)
+{
+  assert(possibly(b));
+}
+
 template <typename real>
 real random_nonzero_in_symmetric_unit_interval()
 {
-  real r;
-  do {
-    r = real(-1) + real(2) * rand() / RAND_MAX;
-  } while (std::abs(r) < real(0.1));
+  real r = real(-1) + real(2) * rand() / RAND_MAX;
+  r.fuzz();
   return r;
 }
 
 template <typename real>
 real random_positive_in_unit_interval()
 {
-  real r;
-  do {
-    r = real(rand()) / RAND_MAX;
-  } while (std::abs(r) < real(0.1));
+  real r = real(rand()) / RAND_MAX;
+  r.fuzz();
   return r;
 }
 
 template <typename real>
-bool is_negligible(real a, real scale)
+bool_interval is_root_of_cubic(real u, real a, real b, real c, real d)
 {
-  static const real tolerance = std::pow(std::numeric_limits<real>::epsilon(), real(0.7));
-  if (std::abs(a) > tolerance * std::abs(scale)) {
-     std::cerr << a << " > " << tolerance * std::abs(scale) << std::endl;
-  }
-  return std::abs(a) <= tolerance * std::abs(scale);
-}
-
-template <typename real>
-bool is_approximately_equal(real a, real b, real scale)
-{
-  if (!is_negligible(a - b, scale)) {
-    std::cerr << a << " != " << b << " for " << scale << std::endl;
-  }
-  return is_negligible(a - b, scale);
-}
-
-template <typename real>
-bool is_approximately_equal(real a, real b)
-{
-  return is_approximately_equal(a, b, std::min(std::abs(a), std::abs(b)));
-}
-
-template <typename real>
-bool is_acceptable_root_of_cubic(real u, real a, real b, real c, real d)
-{
-  real v = std::max(real(1), std::abs(u));
-  real v2 = v * v;
-  real v3 = v2 * v;
-  real scale = std::abs(d);
-  scale = std::max(scale, std::abs(c * v));
-  scale = std::max(scale, std::abs(b * v2));
-  scale = std::max(scale, std::abs(a * v3));
   real u2 = u * u;
   real u3 = u2 * u;
-  return is_negligible(a * u3 + b * u2 + c * u + d, scale);
+  return a * u3 + b * u2 + c * u + d == real(0);
 }
 
 template <typename real>
@@ -95,34 +65,39 @@ void test_one_solve_cubic_equation()
   scale = std::max(scale, std::abs(a));
   switch(determinant_sign) {
     case 0:
-      assert(u1 == u2 || u1 == u3 || u2 == u3);
+      verify(u1 == u2 || u1 == u3 || u2 == u3);
       // fall through
     case 1: {
-        assert(u1 != uninitialized);
-        assert(u2 != uninitialized);
-        assert(u2 != uninitialized);
-        assert(negative_sum_u2_u3 == uninitialized);
-        assert(product_u2_u3 == uninitialized);
-        assert(is_acceptable_root_of_cubic(u1, a, b, c, d));
-        assert(is_acceptable_root_of_cubic(u2, a, b, c, d));
-        assert(is_acceptable_root_of_cubic(u3, a, b, c, d));
+        verify(u1 != uninitialized);
+        verify(u2 != uninitialized);
+        verify(u2 != uninitialized);
+        verify(negative_sum_u2_u3 == uninitialized);
+        verify(product_u2_u3 == uninitialized);
+        verify(is_root_of_cubic(u1, a, b, c, d));
+        verify(is_root_of_cubic(u2, a, b, c, d));
+        verify(is_root_of_cubic(u3, a, b, c, d));
       break;
     }
     case -1: {
-        assert(u1 != uninitialized);
-        assert(u2 == uninitialized);
-        assert(u2 == uninitialized);
-        assert(negative_sum_u2_u3 != uninitialized);
-        assert(product_u2_u3 != uninitialized);
-        assert(negative_sum_u2_u3 * negative_sum_u2_u3 < 4 * product_u2_u3);
-        assert(is_acceptable_root_of_cubic(u1, a, b, c, d));
-        assert(is_approximately_equal(b, a * (negative_sum_u2_u3 - u1), scale));
-        assert(is_approximately_equal(c, a * (product_u2_u3 - u1 * negative_sum_u2_u3), scale));
-        assert(is_approximately_equal(d, -a * u1 * product_u2_u3, scale));
+        verify(u1 != uninitialized);
+        verify(u2 == uninitialized);
+        verify(u2 == uninitialized);
+        verify(negative_sum_u2_u3 != uninitialized);
+        verify(product_u2_u3 != uninitialized);
+#define PRINT(x) std::cerr << #x << " = " << (x) << std::endl;
+        PRINT(negative_sum_u2_u3);
+        PRINT(negative_sum_u2_u3 * negative_sum_u2_u3);
+        PRINT(product_u2_u3)
+        PRINT(4 * product_u2_u3)
+        verify(negative_sum_u2_u3 * negative_sum_u2_u3 < 4 * product_u2_u3);
+        verify(is_root_of_cubic(u1, a, b, c, d));
+        verify(b == a * (negative_sum_u2_u3 - u1));
+        verify(c == a * (product_u2_u3 - u1 * negative_sum_u2_u3));
+        verify(d == -a * u1 * product_u2_u3);
       break;
     }
     default:
-      assert(false);
+      verify(false);
   }
 }
 
@@ -130,8 +105,9 @@ void test_solve_cubic_equation(int repetitions)
 {
   std::cerr << "testing: solve_cubic_equation" << std::endl;
   for (int i = 0; i < repetitions; i++) {
-    test_one_solve_cubic_equation<float>();
-    test_one_solve_cubic_equation<double>();
+    test_one_solve_cubic_equation<interval<float> >();
+    //test_one_solve_cubic_equation<float>();
+    //test_one_solve_cubic_equation<double>();
   }
 }
 
@@ -142,17 +118,6 @@ void test_one_integral_inverse_sqrt_cubic()
   real b = random_nonzero_in_symmetric_unit_interval<real>();
   real c = random_nonzero_in_symmetric_unit_interval<real>();
   real d = random_nonzero_in_symmetric_unit_interval<real>();
-  const real b2 = b * b;
-  const real ac = a * c;
-  const real delta_0 = b2 - 3 * ac;
-  const real delta_1 = b * (2 * b2 - 9 * ac) + 27 * a * a * d;
-  const real delta_1_squared_minus_4_delta0_cubed = delta_1 * delta_1 - 4 * delta_0 * delta_0 * delta_0;
-  real determinant = - delta_1_squared_minus_4_delta0_cubed / (27 * a * a);
-
-  // TODO suck less
-  if (std::abs(determinant) < real(0.5)) {
-    return;
-  }
 
   int determinant_sign;
   const real uninitialized = real(123456789);
@@ -174,10 +139,10 @@ void test_one_integral_inverse_sqrt_cubic()
     real new_x = x + delta;
 
     real slice = integral_inverse_sqrt_cubic(x, new_x, a, b, c, d);
-    assert(std::isfinite(slice));
+    verify(std::isfinite(slice));
     sum_of_slices += slice;
     real whole_integral = integral_inverse_sqrt_cubic(y, new_x, a, b, c, d);
-    assert(is_approximately_equal(sum_of_slices, whole_integral));
+    verify(sum_of_slices == whole_integral);
     x = new_x;
   }
 }
@@ -186,8 +151,11 @@ void test_integral_inverse_sqrt_cubic(int repetitions)
 {
   std::cerr << "testing: integral_inverse_sqrt_cubic" << std::endl;
   for (int i = 0; i < repetitions; i++) {
-    test_one_integral_inverse_sqrt_cubic<float>();
-    test_one_integral_inverse_sqrt_cubic<double>();
+    test_one_integral_inverse_sqrt_cubic<interval<float> >();
+
+    //test_one_integral_inverse_sqrt_cubic<float>();
+    //test_one_integral_inverse_sqrt_cubic<double>();
+    
   }
 }
 

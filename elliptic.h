@@ -19,10 +19,10 @@ real carlson_RF_real(real x0, real y0, real z0)
   y0 = std::max(y0, real(0));
   z0 = std::max(z0, real(0));
 
-  if(!std::isfinite(x0) ||
-     !std::isfinite(y0) ||
-     !std::isfinite(z0) ||
-     int(!x0) + int(!y0) + int(!z0) > 1)
+  if(possibly(!std::isfinite(x0)) ||
+     possibly(!std::isfinite(y0)) ||
+     possibly(!std::isfinite(z0)) ||
+     int(possibly(!x0)) + int(possibly(!y0)) + int(possibly(!z0)) > 1)
   {
     return std::numeric_limits<real>::quiet_NaN();
   }
@@ -41,7 +41,7 @@ real carlson_RF_real(real x0, real y0, real z0)
   const real one_fourth = real(1) / 4;
   real one_fourth_to_the_iter = real(1);
 
-  while(one_fourth_to_the_iter * Q > A) {
+  while(possibly(one_fourth_to_the_iter * Q > A)) {
     iter++;
     one_fourth_to_the_iter *= one_fourth;
     real lambda = std::sqrt(x * y) + std::sqrt(x * z) + std::sqrt(y * z);
@@ -73,15 +73,18 @@ real stabilized_sqrt(real x) {
 template<typename real>
 void sort_three_reals(real& a, real& b, real& c)
 {
-  if (a > b) {
+  if (certainly(a > b)) {
     std::swap(a, b);
   }
-  if (b > c) {
+  if (certainly(b > c)) {
     std::swap(b, c);
   }
-  if (a > b) {
+  if (certainly(a > b)) {
     std::swap(a, b);
   }
+
+  assert(possibly(a <= b));
+  assert(possibly(b <= c));
 }
 
 /*
@@ -97,10 +100,10 @@ template <typename real>
 real integral_inverse_sqrt_cubic_three_roots_unchecked(const real y, const real x,
                                                        const real u1, const real u2, const real u3)
 {
-  if (x == y) {
+  if (certainly(x == y)) {
     return real(0);
   }
-  if (x == std::numeric_limits<real>::infinity()) {
+  if (certainly(x == std::numeric_limits<real>::infinity())) {
     return 2 * carlson_RF_real(y - u3, y - u2, y - u1);
   }
   const real p = (x - u1) * (y - u2) * (y - u3);
@@ -116,7 +119,7 @@ template <typename real>
 real integral_inverse_sqrt_cubic_three_roots(const real y, const real x,
                                              const real u1, const real u2, const real u3)
 {
-  if (y > x) {
+  if (certainly(y > x)) {
     return integral_inverse_sqrt_cubic_three_roots(x, y, u1, u2, u3);
   }
 
@@ -126,12 +129,12 @@ real integral_inverse_sqrt_cubic_three_roots(const real y, const real x,
   sort_three_reals(u1_sorted, u2_sorted, u3_sorted);
 
   real result = real(0);
-  if (y < u2_sorted) {
+  if (possibly(y < u2_sorted)) {
     real x_adjusted = std::min(x, u2_sorted);
     real y_adjusted = std::min(x_adjusted, std::max(y, u1_sorted));
     result += integral_inverse_sqrt_cubic_three_roots_unchecked(y_adjusted, x_adjusted, u1, u2, u3);
   }
-  if (x > u3_sorted) {
+  if (possibly(x > u3_sorted)) {
     real y_adjusted = std::max(y, u3_sorted);
     result += integral_inverse_sqrt_cubic_three_roots_unchecked(y_adjusted, x, u1, u2, u3);
   }
@@ -154,20 +157,20 @@ real integral_inverse_sqrt_cubic_one_quadratic_factor(
 {
   real x = x0;
   real y = y0;
-  if (y > x) {
+  if (certainly(y > x)) {
     return integral_inverse_sqrt_cubic_one_quadratic_factor
              (x, y, u1, negative_sum_u2_u3, product_u2_u3);
   }
   x = std::max(x, u1);
   y = std::max(y, u1);
-  if (y == x) {
+  if (certainly(y == x)) {
     return real(0);
   }
   const real y2 = y * y;
   const real f = product_u2_u3;
   const real g = negative_sum_u2_u3;
   real M_squared;
-  if (x == std::numeric_limits<real>::infinity()) {
+  if (certainly(x == std::numeric_limits<real>::infinity())) {
     M_squared = g + 2 * (y + stabilized_sqrt(f + g * y + y2));
   } else {
     const real X1 = stabilized_sqrt(x - u1);
@@ -200,8 +203,8 @@ void solve_cubic_equation(real a, real b, real c, real d,
   const real delta_0 = b2 - 3 * ac;
   const real delta_1 = b * (2 * b2 - 9 * ac) + 27 * a * a * d;
   const real delta_1_squared_minus_4_delta0_cubed = delta_1 * delta_1 - 4 * delta_0 * delta_0 * delta_0;
-  const real sign_delta_1 = delta_1 >= 0 ? real(1) : real(-1);
-  if (delta_1_squared_minus_4_delta0_cubed > 0) {
+  const real sign_delta_1 = certainly(delta_1 >= real(0)) ? real(1) : real(-1);
+  if (certainly(delta_1_squared_minus_4_delta0_cubed > real(0))) {
     // one real root, one pair of conjugate complex roots
     determinant_sign = -1;
     const real C3abs
@@ -212,20 +215,7 @@ void solve_cubic_equation(real a, real b, real c, real d,
     u1 = (C * (C + b) + delta_0) / (-3 * a * C);
     negative_sum_u2_u3 = u1 + b / a;
     product_u2_u3 = d / (-a * u1);
-  } else if (delta_1_squared_minus_4_delta0_cubed == 0) {
-    // real roots, with u2 == u3
-    determinant_sign = 0;
-    if (delta_1) {
-      const real C3abs
-        = std::abs(delta_1) * (real(1) / 2);
-      const real Cabs = std::exp(std::log(C3abs) * (real(1) / 3));
-      const real C = sign_delta_1 * Cabs;
-      u1 = (C * (C + b) + delta_0) / (-3 * a * C);
-    } else {
-      u1 = -b / (3 * a);
-    }
-    u2 = u3 = (u1 + b / a) * (real(-1) / 2);
-  } else {
+  } else if (certainly(delta_1_squared_minus_4_delta0_cubed < real(0))) {
     // three simple real roots
     determinant_sign = 1;
     const real C3_real = delta_1 * (real(1) / 2);
@@ -242,6 +232,19 @@ void solve_cubic_equation(real a, real b, real c, real d,
     u1 = one_over_neg_3a * (b + 2 * C_real);
     u2 = one_over_neg_3a * (b - C_real - sqrt3 * C_imag);
     u3 = one_over_neg_3a * (b - C_real + sqrt3 * C_imag);
+  } else {
+    // real roots, with u2 == u3
+    determinant_sign = 0;
+    if (certainly(delta_1 != real(0))) {
+      const real C3abs
+        = std::abs(delta_1) * (real(1) / 2);
+      const real Cabs = std::exp(std::log(C3abs) * (real(1) / 3));
+      const real C = sign_delta_1 * Cabs;
+      u1 = (C * (C + b) + delta_0) / (-3 * a * C);
+    } else {
+      u1 = -b / (3 * a);
+    }
+    u2 = u3 = (u1 + b / a) * (real(-1) / 2);
   }
 }
 
@@ -249,12 +252,14 @@ template<typename real>
 real integral_inverse_sqrt_cubic(real y, real x,
                                  real a, real b, real c, real d)
 {
-  if (a == 0) {
+  if (possibly(a == real(0))) {
     return std::numeric_limits<real>::quiet_NaN();
   }
-  if (a < 0) {
+  if (certainly(a < real(0))) {
     return integral_inverse_sqrt_cubic(-x, -y, -a, b, -c, d);
   }
+  assert(certainly(a > real(0)));
+
   int determinant_sign;
   real u1, u2, u3, negative_sum_u2_u3, product_u2_u3;
   solve_cubic_equation(a, b, c, d,
