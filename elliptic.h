@@ -206,12 +206,7 @@ void solve_cubic_equation(real a, real b, real c, real d,
   const real sign_delta_1 = certainly(delta_1 > real(0)) ? real(1)
                           : certainly(delta_1 < real(0)) ? real(-1)
                           : real(0);
-  PRINT(delta_1 * delta_1)
-  PRINT(4 * delta_0 * delta_0 * delta_0)
-  PRINT(delta_1_squared_minus_4_delta0_cubed)
-  PRINT(- delta_1_squared_minus_4_delta0_cubed / (27 * a * a))
   if (certainly(delta_1_squared_minus_4_delta0_cubed > real(0))) {
-    PRINT("foo")
     // one real root, one pair of conjugate complex roots
     determinant_sign = -1;
     const real C3abs
@@ -223,7 +218,6 @@ void solve_cubic_equation(real a, real b, real c, real d,
     negative_sum_u2_u3 = u1 + b / a;
     product_u2_u3 = d / (-a * u1);
   } else if (certainly(delta_1_squared_minus_4_delta0_cubed < real(0))) {
-    PRINT("bar")
     // three simple real roots
     determinant_sign = 1;
     const real C3_real = delta_1 * (real(1) / 2);
@@ -242,32 +236,18 @@ void solve_cubic_equation(real a, real b, real c, real d,
     u3 = one_over_neg_3a * (b - C_real + sqrt3 * C_imag);
   } else {
     // real roots, with u2 == u3
-    PRINT("frfr")
     determinant_sign = 0;
-    PRINT(delta_0)
-    PRINT(delta_1)
-    PRINT(sign_delta_1)
     if (certainly(delta_1 != real(0))) {
-      PRINT("sfsD");
       const real C3abs
         = std::abs(delta_1) * (real(1) / 2);
       const real Cabs = std::exp(std::log(C3abs) * (real(1) / 3));
       const real C = sign_delta_1 * Cabs;
       u1 = (C * (C + b) + delta_0) / (-3 * a * C);
-      PRINT(C3abs)
-      PRINT(Cabs)
-      PRINT(C)
-      PRINT(C+b)
-      PRINT((C * (C + b) + delta_0))
-      PRINT(u1)
     } else {
       u1 = -b / (3 * a);
     }
     negative_sum_u2_u3 = u1 + b / a;
     product_u2_u3 = negative_sum_u2_u3 * negative_sum_u2_u3 * (real(1) / 4);
-
-    PRINT(b/a)
-    PRINT(u1 + b/a)
   }
 }
 

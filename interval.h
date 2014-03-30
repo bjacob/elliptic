@@ -3,7 +3,6 @@
 #include <cmath>
 #include <cfenv>
 #include <cassert>
-#include <iostream>
 
 template <typename real>
 class interval
@@ -62,43 +61,22 @@ public:
     return real(0.5) * diameter();
   }
 
-  void fuzz()
+  static interval construct_quantum(real x)
   {
     const int saved_rounding_mode = std::fegetround();
-    fesetround(FE_DOWNWARD);
-    m_lo -= std::numeric_limits<real>::min();
     fesetround(FE_UPWARD);
-    m_hi += std::numeric_limits<real>::min();
+    real y = x + std::numeric_limits<real>::min();
     fesetround(saved_rounding_mode);
+    return interval(x, y);
   }
 
-  template <typename other_type>
-  interval& operator+=(const other_type& other)
+  bool is_quantum() const
   {
-    return *this = *this + other;
-  }
-
-  template <typename other_type>
-  interval& operator-=(const other_type& other)
-  {
-    return *this = *this - other;
-  }
-
-  template <typename other_type>
-  interval& operator*=(const other_type& other)
-  {
-    return *this = *this * other;
-  }
-
-  template <typename other_type>
-  interval& operator/=(const other_type& other)
-  {
-    return *this = *this / other;
-  }
-
-  interval operator-() const
-  {
-    return interval<real>(-hi(), -lo());
+    const int saved_rounding_mode = std::fegetround();
+    fesetround(FE_UPWARD);
+    real lo_plus_quantum = lo() + std::numeric_limits<real>::min();
+    fesetround(saved_rounding_mode);
+    return hi() == lo_plus_quantum;
   }
 };
 
@@ -184,12 +162,6 @@ inline bool_interval operator||(const bool_interval& a,
                                 const bool_interval& b)
 {
   return bool_interval(a.lo() || b.lo(), a.hi() || b.hi());
-}
-
-template <typename real>
-std::ostream& operator<<(std::ostream& s, const interval<real>& i)
-{
-  return s << "[ " << i.lo() << " .. " << i.hi() << " ]";
 }
 
 template <typename real>
@@ -315,6 +287,36 @@ bool_interval operator!=(real a, const interval<real>& b)
   return !(a == b);
 }
 
+template <typename real, typename other_type>
+interval<real>& operator+=(interval<real>& i, const other_type& other)
+{
+  return i = i + other;
+}
+
+template <typename real, typename other_type>
+interval<real>& operator-=(interval<real>& i, const other_type& other)
+{
+  return i = i - other;
+}
+
+template <typename real, typename other_type>
+interval<real>& operator*=(interval<real>& i, const other_type& other)
+{
+  return i = i * other;
+}
+
+template <typename real, typename other_type>
+interval<real>& operator/=(interval<real>& i, const other_type& other)
+{
+  return i = i / other;
+}
+
+template <typename real>
+interval<real> operator-(const interval<real>& i)
+{
+  return interval<real>(-i.hi(), -i.lo());
+}
+
 template <typename real>
 interval<real> operator+(const interval<real>& i, const interval<real>& j)
 {
@@ -362,7 +364,6 @@ interval<real> operator*(const interval<real>& i, const interval<real>& j)
 template <typename real>
 interval<real> operator/(const interval<real>& i, const interval<real>& j)
 {
-  PRINT("hello")
   if (possibly(j == real(0))) {
     return interval<real>(std::numeric_limits<real>::quiet_NaN());
   }
@@ -667,7 +668,7 @@ bool isfinite(const interval<real>& i)
 }
 
 template <typename real>
-class numeric_limits<interval<real> >
+class numeric_limits<interval<real>>
   : public numeric_limits<real>
 {
   typedef numeric_limits<real> base;
