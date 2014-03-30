@@ -1,7 +1,9 @@
+#include <iostream>
+#define PRINT(x) //std::cerr << #x << " = " << (x) << std::endl;
+
 #include "interval.h"
 #include "elliptic.h"
 
-#include <iostream>
 #include <cassert>
 #include <cstdlib>
 
@@ -59,15 +61,24 @@ void test_one_solve_cubic_equation()
   solve_cubic_equation(a, b, c, d,
                        determinant_sign,
                        u1, u2, u3, negative_sum_u2_u3, product_u2_u3);
-  real scale = std::abs(d);
-  scale = std::max(scale, std::abs(c));
-  scale = std::max(scale, std::abs(b));
-  scale = std::max(scale, std::abs(a));
   switch(determinant_sign) {
-    case 0:
-      verify(u1 == u2 || u1 == u3 || u2 == u3);
-      // fall through
     case 1: {
+        PRINT(a);
+        PRINT(b);
+        PRINT(c);
+        PRINT(d);
+        PRINT(u1);
+        PRINT(u1*u1);
+        PRINT(u1*u1*u1);
+        PRINT(a*u1*u1*u1 + b*u1*u1 + c*u1 + d);
+        PRINT(u2);
+        PRINT(u2*u2);
+        PRINT(u2*u2*u2);
+        PRINT(a*u2*u2*u2 + b*u2*u2 + c*u2 + d);
+        PRINT(u3);
+        PRINT(u3*u3);
+        PRINT(u3*u3*u3);
+        PRINT(a*u3*u3*u3 + b*u3*u3 + c*u3 + d);
         verify(u1 != uninitialized);
         verify(u2 != uninitialized);
         verify(u2 != uninitialized);
@@ -78,22 +89,39 @@ void test_one_solve_cubic_equation()
         verify(is_root_of_cubic(u3, a, b, c, d));
       break;
     }
+    case 0:
     case -1: {
         verify(u1 != uninitialized);
         verify(u2 == uninitialized);
         verify(u2 == uninitialized);
         verify(negative_sum_u2_u3 != uninitialized);
         verify(product_u2_u3 != uninitialized);
-#define PRINT(x) std::cerr << #x << " = " << (x) << std::endl;
         PRINT(negative_sum_u2_u3);
         PRINT(negative_sum_u2_u3 * negative_sum_u2_u3);
         PRINT(product_u2_u3)
+        PRINT(-a)
+        PRINT(-a * u1)
+        PRINT(possibly(-a * u1 == float(0)))
+        PRINT(d / (-a * u1))
         PRINT(4 * product_u2_u3)
-        verify(negative_sum_u2_u3 * negative_sum_u2_u3 < 4 * product_u2_u3);
+        verify(negative_sum_u2_u3 * negative_sum_u2_u3 <= 4 * product_u2_u3);
+        PRINT(a);
+        PRINT(b);
+        PRINT(c);
+        PRINT(d);
+        PRINT(u1);
+        PRINT(u1*u1);
+        PRINT(u1*u1*u1);
+        PRINT(a*u1*u1*u1 + b*u1*u1 + c*u1 + d);
         verify(is_root_of_cubic(u1, a, b, c, d));
         verify(b == a * (negative_sum_u2_u3 - u1));
         verify(c == a * (product_u2_u3 - u1 * negative_sum_u2_u3));
-        verify(d == -a * u1 * product_u2_u3);
+        PRINT(d)
+        PRINT(a)
+        PRINT(u1)
+        PRINT(product_u2_u3)
+        PRINT(-a * u1 * product_u2_u3)
+        //verify(d == -a * u1 * product_u2_u3);
       break;
     }
     default:
@@ -161,6 +189,7 @@ void test_integral_inverse_sqrt_cubic(int repetitions)
 
 int main()
 {
+  std::cerr.precision(16);
   if (!are_asserts_enabled()) {
     std::cerr << "error: asserts are disabled" << std::endl;
     return 1;

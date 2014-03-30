@@ -1,6 +1,7 @@
 #include <limits>
 #include <algorithm>
 #include <cmath>
+#include <cfenv>
 #include <cassert>
 #include <iostream>
 
@@ -16,8 +17,8 @@ public:
     , m_hi(hi)
   {
     assert(lo <= hi ||
-           isnan(lo) ||
-           isnan(hi));
+           std::isnan(lo) ||
+           std::isnan(hi));
   }
 
   interval& operator=(real a)
@@ -63,20 +64,12 @@ public:
 
   void fuzz()
   {
-    static const real one_plus_epsilon  = real(1) + std::numeric_limits<real>::epsilon();
-    static const real one_minus_epsilon = real(1) - std::numeric_limits<real>::epsilon();
-
-    if (m_hi > 0) {
-      m_hi *= one_plus_epsilon;
-    } else if (m_hi < 0) {
-      m_hi *= one_minus_epsilon;
-    }
-
-    if (m_lo < 0) {
-      m_lo *= one_plus_epsilon;
-    } else if (m_lo > 0) {
-      m_lo *= one_minus_epsilon;
-    }
+    const int saved_rounding_mode = std::fegetround();
+    fesetround(FE_DOWNWARD);
+    m_lo -= std::numeric_limits<real>::min();
+    fesetround(FE_UPWARD);
+    m_hi += std::numeric_limits<real>::min();
+    fesetround(saved_rounding_mode);
   }
 
   template <typename other_type>
@@ -109,156 +102,438 @@ public:
   }
 };
 
+namespace std {
+template <typename real>
+bool isnan(const interval<real>& i)
+{
+  return isnan(i.lo()) || isnan(i.hi());
+}
+} // namespace std
+
+class bool_interval
+{
+  bool m_lo, m_hi;
+
+  void assert_consistent() const
+  {
+    assert(!m_lo || m_hi);
+  }
+
+public:
+
+  bool_interval()
+    : m_lo(false)
+    , m_hi(true)
+  {}
+
+  bool_interval(bool lo, bool hi)
+    : m_lo(lo)
+    , m_hi(hi)
+  {
+    assert_consistent();
+  }
+
+  bool_interval& operator=(bool value)
+  {
+    m_lo = value;
+    m_hi = true;
+    return *this;
+  }
+
+  bool_interval(bool value)
+  {
+    *this = value;
+  }
+
+  bool_interval operator!() const
+  {
+    return bool_interval(!m_hi, !m_lo);
+  }
+
+  bool lo() const { return m_lo; }
+  bool hi() const { return m_hi; }
+};
+
+inline bool certainly(const bool_interval& b)
+{
+  return b.lo();
+}
+
+inline bool certainly(bool b)
+{
+  return b;
+}
+
+inline bool possibly(const bool_interval& b)
+{
+  return b.hi();
+}
+
+inline bool possibly(bool b)
+{
+  return b;
+}
+
+inline bool_interval operator&&(const bool_interval& a,
+                                const bool_interval& b)
+{
+  return bool_interval(a.lo() && b.lo(), a.hi() && b.hi());
+}
+
+inline bool_interval operator||(const bool_interval& a,
+                                const bool_interval& b)
+{
+  return bool_interval(a.lo() || b.lo(), a.hi() || b.hi());
+}
+
+template <typename real>
+std::ostream& operator<<(std::ostream& s, const interval<real>& i)
+{
+  return s << "[ " << i.lo() << " .. " << i.hi() << " ]";
+}
+
+template <typename real>
+bool_interval operator>=(const interval<real>& a, const interval<real>& b)
+{
+  if (std::isnan(a) || std::isnan(b)) {
+    return bool_interval(false, true);
+  }
+  return bool_interval(a.lo() >= b.hi(), a.hi() >= b.lo());
+}
+
+template <typename real>
+bool_interval operator<=(const interval<real>& a, const interval<real>& b)
+{
+  return b >= a;
+}
+
+template <typename real>
+bool_interval operator==(const interval<real>& a, const interval<real>& b)
+{
+  return a >= b && b >= a;
+}
+
+template <typename real>
+bool_interval operator>(const interval<real>& a, const interval<real>& b)
+{
+  return !(b >= a);
+}
+
+template <typename real>
+bool_interval operator<(const interval<real>& a, const interval<real>& b)
+{
+  return !(a >= b);
+}
+
+template <typename real>
+bool_interval operator!=(const interval<real>& a, const interval<real>& b)
+{
+  return !(a == b);
+}
+
+template <typename real>
+bool_interval operator!(const interval<real>& a)
+{
+  return a == real(0);
+}
+
+template <typename real>
+bool_interval operator>=(const interval<real>& a, real b)
+{
+  if (std::isnan(a) || std::isnan(b)) {
+    return bool_interval(false, true);
+  }
+  return bool_interval(a.lo() >= b, a.hi() >= b);
+}
+
+template <typename real>
+bool_interval operator>=(real a, const interval<real>& b)
+{
+  if (std::isnan(a) || std::isnan(b)) {
+    return bool_interval(false, true);
+  }
+  return bool_interval(a >= b.hi(), a >= b.lo());
+}
+
+template <typename real>
+bool_interval operator<=(const interval<real>& a, real b)
+{
+  return b >= a;
+}
+
+template <typename real>
+bool_interval operator<=(real a, const interval<real>& b)
+{
+  return b >= a;
+}
+
+template <typename real>
+bool_interval operator==(const interval<real>& a, real b)
+{
+  return a >= b && b >= a;
+}
+
+template <typename real>
+bool_interval operator==(real a, const interval<real>& b)
+{
+  return a >= b && b >= a;
+}
+
+template <typename real>
+bool_interval operator>(const interval<real>& a, real b)
+{
+  return !(b >= a);
+}
+
+template <typename real>
+bool_interval operator>(real a, const interval<real>& b)
+{
+  return !(b >= a);
+}
+
+template <typename real>
+bool_interval operator<(const interval<real>& a, real b)
+{
+  return !(a >= b);
+}
+
+template <typename real>
+bool_interval operator<(real a, const interval<real>& b)
+{
+  return !(a >= b);
+}
+
+template <typename real>
+bool_interval operator!=(const interval<real>& a, real b)
+{
+  return !(a == b);
+}
+
+template <typename real>
+bool_interval operator!=(real a, const interval<real>& b)
+{
+  return !(a == b);
+}
+
 template <typename real>
 interval<real> operator+(const interval<real>& i, const interval<real>& j)
 {
-  return interval<real>(i.lo() + j.lo(), i.hi() + j.hi());
+  const int saved_rounding_mode = std::fegetround();
+  fesetround(FE_DOWNWARD);
+  const real a = i.lo() + j.lo();
+  fesetround(FE_UPWARD);
+  const real b = i.hi() + j.hi();
+  fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> operator-(const interval<real>& i, const interval<real>& j)
 {
-  return interval<real>(i.lo() - j.hi(), i.hi() - j.lo());
+  const int saved_rounding_mode = std::fegetround();
+  fesetround(FE_DOWNWARD);
+  const real a = i.lo() - j.hi();
+  fesetround(FE_UPWARD);
+  const real b = i.hi() - j.lo();
+  fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> operator*(const interval<real>& i, const interval<real>& j)
 {
-  const real a = i.lo() * j.lo();
-  const real b = i.hi() * j.lo();
-  const real c = i.lo() * j.hi();
-  const real d = i.hi() * j.hi();
-  return interval<real>(std::min(std::min(a, b), std::min(c, d)),
-                        std::max(std::max(a, b), std::max(c, d)));
+  const int saved_rounding_mode = std::fegetround();
+  fesetround(FE_DOWNWARD);
+  const real all = i.lo() * j.lo();
+  const real ahl = i.hi() * j.lo();
+  const real alh = i.lo() * j.hi();
+  const real ahh = i.hi() * j.hi();
+  const real a = std::min(std::min(all, ahl), std::min(alh, ahh));
+  fesetround(FE_UPWARD);
+  const real bll = i.lo() * j.lo();
+  const real bhl = i.hi() * j.lo();
+  const real blh = i.lo() * j.hi();
+  const real bhh = i.hi() * j.hi();
+  const real b = std::max(std::max(bll, bhl), std::max(blh, bhh));
+  fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> operator/(const interval<real>& i, const interval<real>& j)
 {
-  const real a = i.lo() / j.lo();
-  const real b = i.hi() / j.lo();
-  const real c = i.lo() / j.hi();
-  const real d = i.hi() / j.hi();
-  return interval<real>(std::min(std::min(a, b), std::min(c, d)),
-                        std::max(std::max(a, b), std::max(c, d)));
+  PRINT("hello")
+  if (possibly(j == real(0))) {
+    return interval<real>(std::numeric_limits<real>::quiet_NaN());
+  }
+
+  const int saved_rounding_mode = std::fegetround();
+  fesetround(FE_DOWNWARD);
+  const real all = i.lo() / j.lo();
+  const real ahl = i.hi() / j.lo();
+  const real alh = i.lo() / j.hi();
+  const real ahh = i.hi() / j.hi();
+  const real a = std::min(std::min(all, ahl), std::min(alh, ahh));
+  fesetround(FE_UPWARD);
+  const real bll = i.lo() / j.lo();
+  const real bhl = i.hi() / j.lo();
+  const real blh = i.lo() / j.hi();
+  const real bhh = i.hi() / j.hi();
+  const real b = std::max(std::max(bll, bhl), std::max(blh, bhh));
+  fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> operator+(const interval<real>& i, real j)
 {
-  return interval<real>(i.lo() + j, i.hi() + j);
+  const int saved_rounding_mode = std::fegetround();
+  fesetround(FE_DOWNWARD);
+  const real a = i.lo() + j;
+  fesetround(FE_UPWARD);
+  const real b = i.hi() + j;
+  fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> operator-(const interval<real>& i, real j)
 {
-  return interval<real>(i.lo() - j, i.hi() - j);
+  const int saved_rounding_mode = std::fegetround();
+  fesetround(FE_DOWNWARD);
+  const real a = i.lo() - j;
+  fesetround(FE_UPWARD);
+  const real b = i.hi() - j;
+  fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> operator*(const interval<real>& i, real j)
 {
-  const real a = i.lo() * j;
-  const real b = i.hi() * j;
-  return interval<real>(std::min(a, b), std::max(a, b));
+  const int saved_rounding_mode = std::fegetround();
+  fesetround(FE_DOWNWARD);
+  const real a = std::min(i.lo() * j, i.hi() * j);
+  fesetround(FE_UPWARD);
+  const real b = std::max(i.lo() * j, i.hi() * j);
+  fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> operator/(const interval<real>& i, real j)
 {
-  const real a = i.lo() / j;
-  const real b = i.hi() / j;
-  const real c = i.lo() / j;
-  const real d = i.hi() / j;
-  return interval<real>(std::min(a, b), std::max(a, b));
+  if (j == real(0)) {
+    return interval<real>(std::numeric_limits<real>::quiet_NaN());
+  }
 
+  const int saved_rounding_mode = std::fegetround();
+  fesetround(FE_DOWNWARD);
+  const real a = std::min(i.lo() / j, i.hi() / j);
+  fesetround(FE_UPWARD);
+  const real b = std::max(i.lo() / j, i.hi() / j);
+  fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> operator+(real i, const interval<real>& j)
 {
-  return interval<real>(i + j.lo(), i + j.hi());
+  const int saved_rounding_mode = std::fegetround();
+  fesetround(FE_DOWNWARD);
+  const real a = i + j.lo();
+  fesetround(FE_UPWARD);
+  const real b = i + j.hi();
+  fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> operator-(real i, const interval<real>& j)
 {
-  return interval<real>(i - j.hi(), i - j.lo());
+  const int saved_rounding_mode = std::fegetround();
+  fesetround(FE_DOWNWARD);
+  const real a = i - j.hi();
+  fesetround(FE_UPWARD);
+  const real b = i - j.lo();
+  fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> operator*(real i, const interval<real>& j)
 {
-  const real a = i * j.lo();
-  const real b = i * j.hi();
-  return interval<real>(std::min(a, b), std::max(a, b));
+  const int saved_rounding_mode = std::fegetround();
+  fesetround(FE_DOWNWARD);
+  const real a = std::min(i * j.lo(), i * j.hi());
+  fesetround(FE_UPWARD);
+  const real b = std::max(i * j.lo(), i * j.hi());
+  fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> operator/(real i, const interval<real>& j)
 {
-  const real a = i / j.lo();
-  const real b = i / j.hi();
-  return interval<real>(std::min(a, b), std::max(a, b));
+  if (possibly(j == real(0))) {
+    return interval<real>(std::numeric_limits<real>::quiet_NaN());
+  }
+
+  const int saved_rounding_mode = std::fegetround();
+  fesetround(FE_DOWNWARD);
+  const real a = std::min(i / j.lo(), i / j.hi());
+  fesetround(FE_UPWARD);
+  const real b = std::max(i / j.lo(), i / j.hi());
+  fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
-
-
 
 template <typename real>
 interval<real> operator+(const interval<real>& i, int j)
 {
-  return interval<real>(i.lo() + j, i.hi() + j);
+  return i + real(j);
 }
 
 template <typename real>
 interval<real> operator-(const interval<real>& i, int j)
 {
-  return interval<real>(i.lo() - j, i.hi() - j);
+  return i - real(j);
 }
 
 template <typename real>
 interval<real> operator*(const interval<real>& i, int j)
 {
-  const real a = i.lo() * j;
-  const real b = i.hi() * j;
-  return interval<real>(std::min(a, b), std::max(a, b));
+  return i * real(j);
 }
 
 template <typename real>
 interval<real> operator/(const interval<real>& i, int j)
 {
-  const real a = i.lo() / j;
-  const real b = i.hi() / j;
-  return interval<real>(std::min(a, b), std::max(a, b));
-
+  return i / real(j);
 }
 
 template <typename real>
 interval<real> operator+(int i, const interval<real>& j)
 {
-  return interval<real>(i + j.lo(), i + j.hi());
+  return real(i) + j;
 }
 
 template <typename real>
 interval<real> operator-(int i, const interval<real>& j)
 {
-  return interval<real>(i - j.hi(), i - j.lo());
+  return real(i) - j;
 }
 
 template <typename real>
 interval<real> operator*(int i, const interval<real>& j)
 {
-  const real a = i * j.lo();
-  const real b = i * j.hi();
-  return interval<real>(std::min(a, b), std::max(a, b));
+  return real(i) * j;
 }
 
 template <typename real>
 interval<real> operator/(int i, const interval<real>& j)
 {
-  const real a = i / j.lo();
-  const real b = i / j.hi();
-  return interval<real>(std::min(a, b), std::max(a, b));
+  return real(i) / j;
 }
 
 namespace std {
@@ -404,127 +679,3 @@ public:
 };
 
 } // namespace std
-
-class bool_interval
-{
-  bool m_lo, m_hi;
-
-  void assert_consistent() const
-  {
-    assert(!m_lo || m_hi);
-  }
-
-public:
-
-  bool_interval()
-    : m_lo(false)
-    , m_hi(true)
-  {}
-
-  bool_interval(bool lo, bool hi)
-    : m_lo(lo)
-    , m_hi(hi)
-  {
-    assert_consistent();
-  }
-
-  bool_interval& operator=(bool value)
-  {
-    m_lo = value;
-    m_hi = true;
-    return *this;
-  }
-
-  bool_interval(bool value)
-  {
-    *this = value;
-  }
-
-  bool_interval operator!() const
-  {
-    return bool_interval(!m_hi, !m_lo);
-  }
-
-  bool lo() const { return m_lo; }
-  bool hi() const { return m_hi; }
-};
-
-inline bool certainly(const bool_interval& b)
-{
-  return b.lo();
-}
-
-inline bool certainly(bool b)
-{
-  return b;
-}
-
-inline bool possibly(const bool_interval& b)
-{
-  return b.hi();
-}
-
-inline bool possibly(bool b)
-{
-  return b;
-}
-
-inline bool_interval operator&&(const bool_interval& a,
-                                const bool_interval& b)
-{
-  return bool_interval(a.lo() && b.lo(), a.hi() && b.hi());
-}
-
-inline bool_interval operator||(const bool_interval& a,
-                                const bool_interval& b)
-{
-  return bool_interval(a.lo() || b.lo(), a.hi() || b.hi());
-}
-
-template <typename real>
-std::ostream& operator<<(std::ostream& s, const interval<real>& i)
-{
-  return s << "[ " << i.lo() << " .. " << i.hi() << " ]";
-}
-
-template <typename real>
-bool_interval operator>=(const interval<real>& a, const interval<real>& b)
-{
-  return bool_interval(a.lo() >= b.hi(), a.hi() >= b.lo());
-}
-
-template <typename real>
-bool_interval operator<=(const interval<real>& a, const interval<real>& b)
-{
-  return b >= a;
-}
-
-template <typename real>
-bool_interval operator==(const interval<real>& a, const interval<real>& b)
-{
-  return a >= b && b >= a;
-}
-
-template <typename real>
-bool_interval operator>(const interval<real>& a, const interval<real>& b)
-{
-  return !(b >= a);
-}
-
-template <typename real>
-bool_interval operator<(const interval<real>& a, const interval<real>& b)
-{
-  return !(a >= b);
-}
-
-template <typename real>
-bool_interval operator!=(const interval<real>& a, const interval<real>& b)
-{
-  return !(a == b);
-}
-
-template <typename real>
-bool_interval operator!(const interval<real>& a)
-{
-  return a == interval<real>(0);
-}
