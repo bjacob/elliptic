@@ -1,6 +1,12 @@
+#ifndef elliptic_h_
+#define elliptic_h_
+
+#include "interval-ready.h"
+
 #include <limits>
 #include <cmath>
 #include <algorithm>
+#include <cassert>
 
 /*
  * Algorithm and notation from:
@@ -277,3 +283,5 @@ real integral_inverse_sqrt_cubic(real y, real x,
     return r * integral_inverse_sqrt_cubic_three_roots(y, x, u1, u2, u3);
   }
 }
+
+#endif // elliptic_h_

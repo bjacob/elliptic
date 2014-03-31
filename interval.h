@@ -1,3 +1,8 @@
+#ifndef interval_h_
+#define interval_h_
+
+#include "interval-ready.h"
+
 #include <limits>
 #include <algorithm>
 #include <cmath>
@@ -80,14 +85,6 @@ public:
   }
 };
 
-namespace std {
-template <typename real>
-bool isnan(const interval<real>& i)
-{
-  return isnan(i.lo()) || isnan(i.hi());
-}
-} // namespace std
-
 class bool_interval
 {
   bool m_lo, m_hi;
@@ -137,19 +134,9 @@ inline bool certainly(const bool_interval& b)
   return b.lo();
 }
 
-inline bool certainly(bool b)
-{
-  return b;
-}
-
 inline bool possibly(const bool_interval& b)
 {
   return b.hi();
-}
-
-inline bool possibly(bool b)
-{
-  return b;
 }
 
 inline bool_interval operator&&(const bool_interval& a,
@@ -668,6 +655,12 @@ bool isfinite(const interval<real>& i)
 }
 
 template <typename real>
+bool isnan(const interval<real>& i)
+{
+  return isnan(i.lo()) || isnan(i.hi());
+}
+
+template <typename real>
 class numeric_limits<interval<real>>
   : public numeric_limits<real>
 {
@@ -680,3 +673,5 @@ public:
 };
 
 } // namespace std
+
+#endif // interval_h_

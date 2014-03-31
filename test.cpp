@@ -1,5 +1,5 @@
-#include "interval.h"
 #include "elliptic.h"
+#include "interval.h"
 
 #include <cassert>
 #include <cstdlib>
