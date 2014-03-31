@@ -64,18 +64,18 @@ public:
   static interval construct_quantum(real x)
   {
     const int saved_rounding_mode = std::fegetround();
-    fesetround(FE_UPWARD);
+    std::fesetround(FE_UPWARD);
     real y = x + std::numeric_limits<real>::min();
-    fesetround(saved_rounding_mode);
+    std::fesetround(saved_rounding_mode);
     return interval(x, y);
   }
 
   bool is_quantum() const
   {
     const int saved_rounding_mode = std::fegetround();
-    fesetround(FE_UPWARD);
+    std::fesetround(FE_UPWARD);
     real lo_plus_quantum = lo() + std::numeric_limits<real>::min();
-    fesetround(saved_rounding_mode);
+    std::fesetround(saved_rounding_mode);
     return hi() == lo_plus_quantum;
   }
 };
@@ -321,11 +321,11 @@ template <typename real>
 interval<real> operator+(const interval<real>& i, const interval<real>& j)
 {
   const int saved_rounding_mode = std::fegetround();
-  fesetround(FE_DOWNWARD);
+  std::fesetround(FE_DOWNWARD);
   const real a = i.lo() + j.lo();
-  fesetround(FE_UPWARD);
+  std::fesetround(FE_UPWARD);
   const real b = i.hi() + j.hi();
-  fesetround(saved_rounding_mode);
+  std::fesetround(saved_rounding_mode);
   return interval<real>(a, b);
 }
 
@@ -333,11 +333,11 @@ template <typename real>
 interval<real> operator-(const interval<real>& i, const interval<real>& j)
 {
   const int saved_rounding_mode = std::fegetround();
-  fesetround(FE_DOWNWARD);
+  std::fesetround(FE_DOWNWARD);
   const real a = i.lo() - j.hi();
-  fesetround(FE_UPWARD);
+  std::fesetround(FE_UPWARD);
   const real b = i.hi() - j.lo();
-  fesetround(saved_rounding_mode);
+  std::fesetround(saved_rounding_mode);
   return interval<real>(a, b);
 }
 
@@ -345,19 +345,19 @@ template <typename real>
 interval<real> operator*(const interval<real>& i, const interval<real>& j)
 {
   const int saved_rounding_mode = std::fegetround();
-  fesetround(FE_DOWNWARD);
+  std::fesetround(FE_DOWNWARD);
   const real all = i.lo() * j.lo();
   const real ahl = i.hi() * j.lo();
   const real alh = i.lo() * j.hi();
   const real ahh = i.hi() * j.hi();
   const real a = std::min(std::min(all, ahl), std::min(alh, ahh));
-  fesetround(FE_UPWARD);
+  std::fesetround(FE_UPWARD);
   const real bll = i.lo() * j.lo();
   const real bhl = i.hi() * j.lo();
   const real blh = i.lo() * j.hi();
   const real bhh = i.hi() * j.hi();
   const real b = std::max(std::max(bll, bhl), std::max(blh, bhh));
-  fesetround(saved_rounding_mode);
+  std::fesetround(saved_rounding_mode);
   return interval<real>(a, b);
 }
 
@@ -369,19 +369,19 @@ interval<real> operator/(const interval<real>& i, const interval<real>& j)
   }
 
   const int saved_rounding_mode = std::fegetround();
-  fesetround(FE_DOWNWARD);
+  std::fesetround(FE_DOWNWARD);
   const real all = i.lo() / j.lo();
   const real ahl = i.hi() / j.lo();
   const real alh = i.lo() / j.hi();
   const real ahh = i.hi() / j.hi();
   const real a = std::min(std::min(all, ahl), std::min(alh, ahh));
-  fesetround(FE_UPWARD);
+  std::fesetround(FE_UPWARD);
   const real bll = i.lo() / j.lo();
   const real bhl = i.hi() / j.lo();
   const real blh = i.lo() / j.hi();
   const real bhh = i.hi() / j.hi();
   const real b = std::max(std::max(bll, bhl), std::max(blh, bhh));
-  fesetround(saved_rounding_mode);
+  std::fesetround(saved_rounding_mode);
   return interval<real>(a, b);
 }
 
@@ -389,11 +389,11 @@ template <typename real>
 interval<real> operator+(const interval<real>& i, real j)
 {
   const int saved_rounding_mode = std::fegetround();
-  fesetround(FE_DOWNWARD);
+  std::fesetround(FE_DOWNWARD);
   const real a = i.lo() + j;
-  fesetround(FE_UPWARD);
+  std::fesetround(FE_UPWARD);
   const real b = i.hi() + j;
-  fesetround(saved_rounding_mode);
+  std::fesetround(saved_rounding_mode);
   return interval<real>(a, b);
 }
 
@@ -401,11 +401,11 @@ template <typename real>
 interval<real> operator-(const interval<real>& i, real j)
 {
   const int saved_rounding_mode = std::fegetround();
-  fesetround(FE_DOWNWARD);
+  std::fesetround(FE_DOWNWARD);
   const real a = i.lo() - j;
-  fesetround(FE_UPWARD);
+  std::fesetround(FE_UPWARD);
   const real b = i.hi() - j;
-  fesetround(saved_rounding_mode);
+  std::fesetround(saved_rounding_mode);
   return interval<real>(a, b);
 }
 
@@ -413,11 +413,11 @@ template <typename real>
 interval<real> operator*(const interval<real>& i, real j)
 {
   const int saved_rounding_mode = std::fegetround();
-  fesetround(FE_DOWNWARD);
+  std::fesetround(FE_DOWNWARD);
   const real a = std::min(i.lo() * j, i.hi() * j);
-  fesetround(FE_UPWARD);
+  std::fesetround(FE_UPWARD);
   const real b = std::max(i.lo() * j, i.hi() * j);
-  fesetround(saved_rounding_mode);
+  std::fesetround(saved_rounding_mode);
   return interval<real>(a, b);
 }
 
@@ -429,11 +429,11 @@ interval<real> operator/(const interval<real>& i, real j)
   }
 
   const int saved_rounding_mode = std::fegetround();
-  fesetround(FE_DOWNWARD);
+  std::fesetround(FE_DOWNWARD);
   const real a = std::min(i.lo() / j, i.hi() / j);
-  fesetround(FE_UPWARD);
+  std::fesetround(FE_UPWARD);
   const real b = std::max(i.lo() / j, i.hi() / j);
-  fesetround(saved_rounding_mode);
+  std::fesetround(saved_rounding_mode);
   return interval<real>(a, b);
 }
 
@@ -441,11 +441,11 @@ template <typename real>
 interval<real> operator+(real i, const interval<real>& j)
 {
   const int saved_rounding_mode = std::fegetround();
-  fesetround(FE_DOWNWARD);
+  std::fesetround(FE_DOWNWARD);
   const real a = i + j.lo();
-  fesetround(FE_UPWARD);
+  std::fesetround(FE_UPWARD);
   const real b = i + j.hi();
-  fesetround(saved_rounding_mode);
+  std::fesetround(saved_rounding_mode);
   return interval<real>(a, b);
 }
 
@@ -453,11 +453,11 @@ template <typename real>
 interval<real> operator-(real i, const interval<real>& j)
 {
   const int saved_rounding_mode = std::fegetround();
-  fesetround(FE_DOWNWARD);
+  std::fesetround(FE_DOWNWARD);
   const real a = i - j.hi();
-  fesetround(FE_UPWARD);
+  std::fesetround(FE_UPWARD);
   const real b = i - j.lo();
-  fesetround(saved_rounding_mode);
+  std::fesetround(saved_rounding_mode);
   return interval<real>(a, b);
 }
 
@@ -465,11 +465,11 @@ template <typename real>
 interval<real> operator*(real i, const interval<real>& j)
 {
   const int saved_rounding_mode = std::fegetround();
-  fesetround(FE_DOWNWARD);
+  std::fesetround(FE_DOWNWARD);
   const real a = std::min(i * j.lo(), i * j.hi());
-  fesetround(FE_UPWARD);
+  std::fesetround(FE_UPWARD);
   const real b = std::max(i * j.lo(), i * j.hi());
-  fesetround(saved_rounding_mode);
+  std::fesetround(saved_rounding_mode);
   return interval<real>(a, b);
 }
 
@@ -481,11 +481,11 @@ interval<real> operator/(real i, const interval<real>& j)
   }
 
   const int saved_rounding_mode = std::fegetround();
-  fesetround(FE_DOWNWARD);
+  std::fesetround(FE_DOWNWARD);
   const real a = std::min(i / j.lo(), i / j.hi());
-  fesetround(FE_UPWARD);
+  std::fesetround(FE_UPWARD);
   const real b = std::max(i / j.lo(), i / j.hi());
-  fesetround(saved_rounding_mode);
+  std::fesetround(saved_rounding_mode);
   return interval<real>(a, b);
 }
 

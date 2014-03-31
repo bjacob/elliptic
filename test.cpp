@@ -75,7 +75,7 @@ void test_one_solve_cubic_equation()
     case 1: {
         verify(u1 != uninitialized);
         verify(u2 != uninitialized);
-        verify(u2 != uninitialized);
+        verify(u3 != uninitialized);
         verify(negative_sum_u2_u3 == uninitialized);
         verify(product_u2_u3 == uninitialized);
         verify(is_root_of_cubic(u1, a, b, c, d));
@@ -87,7 +87,7 @@ void test_one_solve_cubic_equation()
     case -1: {
         verify(u1 != uninitialized);
         verify(u2 == uninitialized);
-        verify(u2 == uninitialized);
+        verify(u3 == uninitialized);
         verify(negative_sum_u2_u3 != uninitialized);
         verify(product_u2_u3 != uninitialized);
         verify(negative_sum_u2_u3 * negative_sum_u2_u3 <= 4 * product_u2_u3);
