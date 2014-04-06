@@ -611,9 +611,31 @@ interval<real> cos(const interval<real>& i)
 template <typename real>
 interval<real> sin(const interval<real>& i)
 {
-  const real a = sin(i.lo());
-  const real b = sin(i.hi());
-  return interval<real>(min(a, b), max(a, b));
+  const real width = i.hi() - i.lo();
+
+  if (width >= real(2 * M_PI)) {
+    return interval<real>(real(-1), real(1));
+  }
+
+  if (width < real(M_PI / 2)) {
+    const real derivative_lo = -cos(i.lo());
+    const real derivative_hi = -cos(i.hi());
+
+    const int saved_rounding_mode = std::fegetround();
+    std::fesetround(FE_DOWNWARD);
+    const real a = derivative_lo < real(0) && derivative_hi > real(0)
+                   ? real(-1)
+                   : std::min(std::sin(i.lo()), std::sin(i.hi()));
+    std::fesetround(FE_UPWARD);
+    const real b = derivative_lo > real(0) && derivative_hi < real(0)
+                   ? real(1)
+                   : std::max(std::sin(i.lo()), std::sin(i.hi()));
+    std::fesetround(saved_rounding_mode);
+
+    return interval<real>(a, b);
+  }
+
+  return interval_union(i.lower_half(), i.upper_half());
 }
 
 template <typename real>
