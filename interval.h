@@ -56,6 +56,16 @@ public:
     return real(0.5) * (lo() + hi());
   }
 
+  interval lower_half() const
+  {
+    return interval(lo(), mid());
+  }
+
+  interval upper_half() const
+  {
+    return interval(mid(), hi());
+  }
+
   real diameter() const
   {
     return hi() - lo();
@@ -84,6 +94,12 @@ public:
     return hi() == lo_plus_quantum;
   }
 };
+
+template <typename real>
+interval<real> interval_union(const interval<real>& i, const interval<real>& j)
+{
+  return interval<real>(std::min(i.lo(), j.lo()), std::max(i.hi(), j.hi()));
+}
 
 class bool_interval
 {
@@ -529,27 +545,67 @@ namespace std {
 template <typename real>
 interval<real> sqrt(const interval<real>& i)
 {
-  return interval<real>(sqrt(i.lo()), sqrt(i.hi()));
+  const int saved_rounding_mode = std::fegetround();
+  std::fesetround(FE_DOWNWARD);
+  const real a = std::sqrt(i.lo());
+  std::fesetround(FE_UPWARD);
+  const real b = std::sqrt(i.hi());
+  std::fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> exp(const interval<real>& i)
 {
-  return interval<real>(exp(i.lo()), exp(i.hi()));
+  const int saved_rounding_mode = std::fegetround();
+  std::fesetround(FE_DOWNWARD);
+  const real a = std::exp(i.lo());
+  std::fesetround(FE_UPWARD);
+  const real b = std::exp(i.hi());
+  std::fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> log(const interval<real>& i)
 {
-  return interval<real>(log(i.lo()), log(i.hi()));
+  const int saved_rounding_mode = std::fegetround();
+  std::fesetround(FE_DOWNWARD);
+  const real a = std::log(i.lo());
+  std::fesetround(FE_UPWARD);
+  const real b = std::log(i.hi());
+  std::fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
 interval<real> cos(const interval<real>& i)
 {
-  const real a = cos(i.lo());
-  const real b = cos(i.hi());
-  return interval<real>(min(a, b), max(a, b));
+  const real width = i.hi() - i.lo();
+
+  if (width >= real(2 * M_PI)) {
+    return interval<real>(real(-1), real(1));
+  }
+
+  if (width < real(M_PI / 2)) {
+    const real derivative_lo = sin(i.lo());
+    const real derivative_hi = sin(i.hi());
+
+    const int saved_rounding_mode = std::fegetround();
+    std::fesetround(FE_DOWNWARD);
+    const real a = derivative_lo < real(0) && derivative_hi > real(0)
+                   ? real(-1)
+                   : std::min(std::cos(i.lo()), std::cos(i.hi()));
+    std::fesetround(FE_UPWARD);
+    const real b = derivative_lo > real(0) && derivative_hi < real(0)
+                   ? real(1)
+                   : std::max(std::cos(i.lo()), std::cos(i.hi()));
+    std::fesetround(saved_rounding_mode);
+
+    return interval<real>(a, b);
+  }
+
+  return interval_union(i.lower_half(), i.upper_half());
 }
 
 template <typename real>
