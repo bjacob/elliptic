@@ -9,6 +9,8 @@
 #include <cfenv>
 #include <cassert>
 
+#include <iostream>
+
 template <typename real>
 class interval
 {
@@ -74,6 +76,11 @@ public:
   real radius() const
   {
     return real(0.5) * diameter();
+  }
+
+  static interval construct_NaN()
+  {
+    return std::numeric_limits<real>::quiet_NaN();
   }
 
   static interval construct_quantum(real x)
@@ -368,7 +375,7 @@ template <typename real>
 interval<real> operator/(const interval<real>& i, const interval<real>& j)
 {
   if (possibly(j == real(0))) {
-    return interval<real>(std::numeric_limits<real>::quiet_NaN());
+    return interval<real>::construct_NaN();
   }
 
   const int saved_rounding_mode = std::fegetround();
@@ -428,7 +435,7 @@ template <typename real>
 interval<real> operator/(const interval<real>& i, real j)
 {
   if (j == real(0)) {
-    return interval<real>(std::numeric_limits<real>::quiet_NaN());
+    return interval<real>::construct_NaN();
   }
 
   const int saved_rounding_mode = std::fegetround();
@@ -480,7 +487,7 @@ template <typename real>
 interval<real> operator/(real i, const interval<real>& j)
 {
   if (possibly(j == real(0))) {
-    return interval<real>(std::numeric_limits<real>::quiet_NaN());
+    return interval<real>::construct_NaN();
   }
 
   const int saved_rounding_mode = std::fegetround();
@@ -639,41 +646,47 @@ interval<real> sin(const interval<real>& i)
 }
 
 template <typename real>
-interval<real> pow(const interval<real>& i, real j)
-{
-  const real a = pow(i.lo(), j);
-  const real b = pow(i.hi(), j);
-  return interval<real>(min(a, b), max(a, b));
-}
-
-template <typename real>
-interval<real> pow(real i, const interval<real>& j)
-{
-  const real a = pow(i, j.lo());
-  const real b = pow(i, j.hi());
-  return interval<real>(min(a, b), max(a, b));
-}
-
-template <typename real>
 interval<real> pow(const interval<real>& i, const interval<real>& j)
 {
-  const real a = pow(i.lo(), j.lo());
-  const real b = pow(i.hi(), j.lo());
-  const real c = pow(i.lo(), j.hi());
-  const real d = pow(i.hi(), j.hi());
-  return interval<real>(min(min(a, b), min(c, d)),
-                        max(max(a, b), max(c, d)));
+  if (possibly(i == real(0) && j == real(0))) {
+    return interval<real>::construct_NaN();
+  }
+
+  const int saved_rounding_mode = std::fegetround();
+  std::fesetround(FE_DOWNWARD);
+  const real a = min(min(pow(i.lo(), j.lo()), pow(i.hi(), j.lo())),
+                     min(pow(i.lo(), j.hi()), pow(i.hi(), j.hi())));
+  std::fesetround(FE_UPWARD);
+  const real b = max(max(pow(i.lo(), j.lo()), pow(i.hi(), j.lo())),
+                     max(pow(i.lo(), j.hi()), pow(i.hi(), j.hi())));
+  std::fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
+}
+
+template <typename real>
+real foo(real x, real y)
+{
+  real result = atan2(x, y);
+  std::cerr << "atan2(" << x << ", " << y << ") = " << result << std::endl;
+  return result;
 }
 
 template <typename real>
 interval<real> atan2(const interval<real>& i, const interval<real>& j)
 {
-  const real a = atan2(i.lo(), j.lo());
-  const real b = atan2(i.hi(), j.lo());
-  const real c = atan2(i.lo(), j.hi());
-  const real d = atan2(i.hi(), j.hi());
-  return interval<real>(min(min(a, b), min(c, d)),
-                        max(max(a, b), max(c, d)));
+  if (possibly(i == real(0) && j == real(0))) {
+    return interval<real>::construct_NaN();
+  }
+
+  const int saved_rounding_mode = std::fegetround();
+  std::fesetround(FE_DOWNWARD);
+  const real a = min(min(foo(i.lo(), j.lo()), foo(i.hi(), j.lo())),
+                     min(foo(i.lo(), j.hi()), foo(i.hi(), j.hi())));
+  std::fesetround(FE_UPWARD);
+  const real b = max(max(foo(i.lo(), j.lo()), foo(i.hi(), j.lo())),
+                     max(foo(i.lo(), j.hi()), foo(i.hi(), j.hi())));
+  std::fesetround(saved_rounding_mode);
+  return interval<real>(a, b);
 }
 
 template <typename real>
@@ -744,6 +757,7 @@ class numeric_limits<interval<real>>
 {
   typedef numeric_limits<real> base;
 public:
+  static const interval<real> epsilon() { return base::epsilon(); }
   static const interval<real> infinity() { return base::infinity(); }
   static const interval<real> quiet_NaN() { return base::quiet_NaN(); }
   static const interval<real> min() { return base::min(); }
