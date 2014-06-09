@@ -106,8 +106,7 @@ void test_solve_cubic_equation(int repetitions)
   std::cerr << "testing: solve_cubic_equation" << std::endl;
   for (int i = 0; i < repetitions; i++) {
     test_one_solve_cubic_equation<interval<float>>();
-    //test_one_solve_cubic_equation<float>();
-    //test_one_solve_cubic_equation<double>();
+    test_one_solve_cubic_equation<interval<double>>();
   }
 }
 
@@ -152,10 +151,7 @@ void test_integral_inverse_sqrt_cubic(int repetitions)
   std::cerr << "testing: integral_inverse_sqrt_cubic" << std::endl;
   for (int i = 0; i < repetitions; i++) {
     test_one_integral_inverse_sqrt_cubic<interval<float>>();
-
-    //test_one_integral_inverse_sqrt_cubic<float>();
-    //test_one_integral_inverse_sqrt_cubic<double>();
-    
+    test_one_integral_inverse_sqrt_cubic<interval<double>>();
   }
 }
 
@@ -167,7 +163,7 @@ int main()
     return 1;
   }
 
-  test_solve_cubic_equation(10000000);
-  test_integral_inverse_sqrt_cubic(1000000);
+  test_solve_cubic_equation(100000);
+  test_integral_inverse_sqrt_cubic(10000);
   return 0;
 }
